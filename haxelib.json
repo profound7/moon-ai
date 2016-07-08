@@ -1,0 +1,15 @@
+{
+    "name": "moon-ai",
+    "license": "MIT",
+    "tags": ["cross", "utility", "ai"],
+    "description": "Artificial intelligence library. Neural network.",
+    "contributors": ["profound7"],
+    "releasenote": "First release",
+    "version": "0.1.0",
+    "url": "https://github.com/profound7/moon-peg",
+    "classPath": "src",
+    "dependencies": 
+    {
+        "moon-core": ""
+    }
+}
