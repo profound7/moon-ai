@@ -1,7 +1,7 @@
 package moon.ai.neural;
 
-import moon.ai.neural.Activator.IActivator;
-import moon.ai.neural.Neuron.NeuronConnection;
+import moon.ai.neural.Activator;
+import moon.ai.neural.Neuron;
 
 /**
  * A layer consist of multiple neurons.
@@ -97,11 +97,11 @@ class Layer implements ILayerProjectable
      * Projects a connection from this layer to another one.
      * Unit can be either a network or a layer.
      */
-    public function project(unit:ILayerProjectable, ?type:ConnectionType, ?weight:Float):LayerConnection
+    public function project(unit:ILayerProjectable, ?type:LayerConnectionType, ?weight:Float):LayerConnection
     {
         var layer:Layer = unit.getProjectableLayer();
         
-        if (isConnected(layer) == null)
+        if (getConnectionType(layer) == None)
             return new LayerConnection(this, layer, type, weight);
             
         throw "Layer has already been connected!";
@@ -120,47 +120,46 @@ class Layer implements ILayerProjectable
      */
     public function gate(connection:LayerConnection, type:GateType):Void
     {
-        if (type == GateType.Input)
+        switch (type)
         {
-            if (connection.to.size != size)
-                throw "GATER layer and CONNECTION.TO layer must be the same size in order to gate!";
+            case Input:
+                if (connection.to.size != size)
+                    throw "GATER layer and CONNECTION.TO layer must be the same size in order to gate!";
+                    
+                for (i in 0...connection.to.list.length)
+                {
+                    var neuron:Neuron = connection.to.list[i];
+                    var gater:Neuron = list[i];
+                    
+                    for (gated in neuron.connections.inputs)
+                        if (connection.connections.exists(gated.ID))
+                            gater.gate(gated);
+                }
                 
-            for (i in 0...connection.to.list.length)
-            {
-                var neuron:Neuron = connection.to.list[i];
-                var gater:Neuron = list[i];
+            case Output:
+                if (connection.from.size != size)
+                    throw "GATER layer and CONNECTION.FROM layer must be the same size in order to gate!";
+                    
+                for (i in 0...connection.from.list.length)
+                {
+                    var neuron:Neuron = connection.from.list[i];
+                    var gater:Neuron = this.list[i];
+                    
+                    for (gated in neuron.connections.projected)
+                        if (connection.connections.exists(gated.ID))
+                            gater.gate(gated);
+                }
                 
-                for (gated in neuron.connections.inputs)
-                    if (connection.connections.exists(gated.ID))
-                        gater.gate(gated);
-            }
-        }
-        else if (type == GateType.Output)
-        {
-            if (connection.from.size != size)
-                throw "GATER layer and CONNECTION.FROM layer must be the same size in order to gate!";
-                
-            for (i in 0...connection.from.list.length)
-            {
-                var neuron:Neuron = connection.from.list[i];
-                var gater:Neuron = this.list[i];
-                
-                for (gated in neuron.connections.projected)
-                    if (connection.connections.exists(gated.ID))
-                        gater.gate(gated);
-            }
-        }
-        else if (type == GateType.OneToOne)
-        {
-            if (connection.size != size)
-                throw "The number of GATER UNITS must be the same as the number of CONNECTIONS to gate!";
-                
-            for (i in 0...connection.list.length)
-            {
-                var gater:Neuron = list[i];
-                var gated:NeuronConnection = connection.list[i];
-                gater.gate(gated);
-            }
+            case OneToOne:
+                if (connection.size != size)
+                    throw "The number of GATER UNITS must be the same as the number of CONNECTIONS to gate!";
+                    
+                for (i in 0...connection.list.length)
+                {
+                    var gater:Neuron = list[i];
+                    var gated:NeuronConnection = connection.list[i];
+                    gater.gate(gated);
+                }
         }
         
         // NEW
@@ -180,9 +179,9 @@ class Layer implements ILayerProjectable
     
     /**
      * True or false whether the layer is connected to another layer (parameter) or not.
-     * TODO: rename to getConnectionType
+     * MODIFIED: in original source, its called connection()
      */
-    public function isConnected(layer:Layer):ConnectionType
+    public function getConnectionType(layer:Layer):LayerConnectionType
     {
         // Check if ALL to ALL connection
         var connections:Int = 0;
@@ -191,15 +190,15 @@ class Layer implements ILayerProjectable
         {
             for (to in layer.list)
             {
-                var connected = from.isConnected(to);
+                var connected = from.getConnectionInfo(to);
                 
-                if (connected != null && connected.type == 'projected')
+                if (connected != null && connected.type == NeuronConnectionType.Projected)
                     connections++;
             }
         }
         
         if (connections == size * layer.size)
-            return ConnectionType.AllToAll;
+            return LayerConnectionType.AllToAll;
 
         // Check if ONE to ONE connection
         connections = 0;
@@ -209,17 +208,16 @@ class Layer implements ILayerProjectable
             var from:Neuron = this.list[i];
             var to:Neuron = layer.list[i];
             
-            var connected = from.isConnected(to);
+            var connected = from.getConnectionInfo(to);
             
-            if (connected != null && connected.type == 'projected')
+            if (connected != null && connected.type == NeuronConnectionType.Projected)
                 connections++;
         }
         
         if (connections == size)
-            return ConnectionType.OneToOne;
+            return LayerConnectionType.OneToOne;
             
-        return null;
-        // return ConnectionType.None; // TODO
+         return LayerConnectionType.None;
     }
     
     /**
@@ -293,14 +291,14 @@ class LayerConnection
     public var from:Layer;
     public var to:Layer;
     public var selfconnection:Bool;
-    public var type:ConnectionType;
+    public var type:LayerConnectionType;
     public var connections:Map<Int, NeuronConnection>;
     public var list:Array<NeuronConnection>;
     public var size:Int;
     public var gatedFrom:Array<GatedInfo>;
     
     
-    public function new(fromLayer:Layer, toLayer:Layer, type:ConnectionType, weight:Float)
+    public function new(fromLayer:Layer, toLayer:Layer, type:LayerConnectionType, weight:Float)
     {
         this.ID = uid();
         this.from = fromLayer;
@@ -312,21 +310,21 @@ class LayerConnection
         this.size = 0;
         this.gatedFrom = [];
         
-        if (this.type == null)
+        if (this.type == null || this.type == LayerConnectionType.None)
         {
             if (fromLayer == toLayer)
-                this.type = ConnectionType.OneToOne;
+                this.type = LayerConnectionType.OneToOne;
             else
-                this.type = ConnectionType.AllToAll;
+                this.type = LayerConnectionType.AllToAll;
         }
         
-        if (this.type == ConnectionType.AllToAll || this.type == ConnectionType.AllToElse)
+        if (this.type == LayerConnectionType.AllToAll || this.type == LayerConnectionType.AllToElse)
         {
             for (from in from.list)
             {
                 for (to in to.list)
                 {
-                    if (this.type == ConnectionType.AllToElse && from == to)
+                    if (this.type == LayerConnectionType.AllToElse && from == to)
                         continue;
                         
                     var connection:NeuronConnection = from.project(to, weight);
@@ -338,7 +336,7 @@ class LayerConnection
             
             size = list.length;
         }
-        else if (this.type == ConnectionType.OneToOne)
+        else if (this.type == LayerConnectionType.OneToOne)
         {
             for (i in 0...from.list.length)
             {
@@ -390,7 +388,7 @@ enum GateType
     OneToOne;
 }
 
-enum ConnectionType
+enum LayerConnectionType
 {
     None;
     AllToAll;

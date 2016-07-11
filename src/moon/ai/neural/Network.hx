@@ -1,10 +1,7 @@
 package moon.ai.neural;
 
-import moon.ai.neural.Layer.ConnectionType;
-import moon.ai.neural.Layer.GateType;
-import moon.ai.neural.Layer.ILayerProjectable;
-import moon.ai.neural.Layer.LayerConnection;
-import moon.ai.neural.Network.NetworkLayers;
+import moon.ai.neural.Layer;
+import moon.ai.neural.Network;
 import moon.ai.neural.Neuron.NeuronConnection;
 
 using StringTools;
@@ -85,7 +82,7 @@ class Network implements ILayerProjectable implements INetwork
     /**
      * Project a connection to another unit (either a network or a layer)
      */
-    public function project(unit:ILayerProjectable, ?type:ConnectionType, ?weight:Float):LayerConnection
+    public function project(unit:ILayerProjectable, ?type:LayerConnectionType, ?weight:Float):LayerConnection
     {
         if (optimized != null)
             optimized.reset();

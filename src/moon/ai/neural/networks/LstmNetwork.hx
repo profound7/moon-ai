@@ -64,9 +64,9 @@ class LstmNetwork extends Network
             var self:LayerConnection = memoryCell.project(memoryCell);
             
             // peepholes
-            memoryCell.project(inputGate, ConnectionType.OneToOne);
-            memoryCell.project(forgetGate, ConnectionType.OneToOne);
-            memoryCell.project(outputGate, ConnectionType.OneToOne);
+            memoryCell.project(inputGate, LayerConnectionType.OneToOne);
+            memoryCell.project(forgetGate, LayerConnectionType.OneToOne);
+            memoryCell.project(outputGate, LayerConnectionType.OneToOne);
             
             // gates
             inputGate.gate(input, GateType.Input);

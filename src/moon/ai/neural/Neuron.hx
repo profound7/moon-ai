@@ -1,6 +1,7 @@
 package moon.ai.neural;
 
 import moon.ai.neural.Activator.IActivator;
+import moon.ai.neural.Neuron.NeuronConnections;
 
 
 /**
@@ -14,12 +15,12 @@ class Neuron
     public var ID:Int;
     public var label:String = null;
     
-    public var connections:NeuronConnections =
-    {
+    public var connections:NeuronConnections;
+    /*{
         inputs: new Map<Int, NeuronConnection>(),
         projected: new Map<Int, NeuronConnection>(),
         gated: new Map<Int, NeuronConnection>(),
-    };
+    };*/
     
     public var error:NeuronError =
     {
@@ -50,6 +51,7 @@ class Neuron
     public function new(?activator:IActivator) 
     {
         this.ID = uid();
+        this.connections = new NeuronConnections();
         this.selfconnection = new NeuronConnection(this, this, 0.0);
         this.squash = activator == null ? Activator.init : activator;
         this.neighbors = new Map<Int, Neuron>();
@@ -231,10 +233,10 @@ class Neuron
         }
         
         // check if connection already exists
-        var connected:ConnectionResult = isConnected(neuron);
+        var connected:NeuronConnectionInfo = getConnectionInfo(neuron);
         
         // connection already exist, so update weight instead if necessary
-        if (connected != null && connected.type == "projected")
+        if (connected != null && connected.type == NeuronConnectionType.Projected)
         {
             // update connection
             if (weight != null)
@@ -301,9 +303,9 @@ class Neuron
      * Returns true or false whether this neuron is connected to another neuron (parameter)
      * TODO: rename to getConnectionType
      */
-    public function isConnected(neuron:Neuron):ConnectionResult
+    public function getConnectionInfo(neuron:Neuron):NeuronConnectionInfo
     {
-        var result:ConnectionResult =
+        var result:NeuronConnectionInfo =
         {
             type: null,
             connection: null,
@@ -313,7 +315,7 @@ class Neuron
         {
             if (isSelfConnected())
             {
-                result.type = "selfconnection";
+                result.type = NeuronConnectionType.Self;
                 result.connection = this.selfconnection;
                 return result;
             }
@@ -325,13 +327,26 @@ class Neuron
         
         // TODO: optimize
         // gated, inputs, projected
-        for (type in Reflect.fields(connections)) // :String
+        /*for (type in Reflect.fields(connections)) // :String
         {
             for (connection in (Reflect.field(connections, type):Map<Int, NeuronConnection>))
             {
                 if (connection.to == neuron || connection.from == neuron)
                 {
                     result.type = type; // gated | inputs | projected
+                    result.connection = connection;
+                    return result;
+                }
+            }
+        }*/
+        
+        for (type in NeuronConnections.types) // Inputs, Projected, Gated
+        {
+            for (connection in connections.get(type))
+            {
+                if (connection.to == neuron || connection.from == neuron)
+                {
+                    result.type = type;
                     result.connection = connection;
                     return result;
                 }
@@ -418,18 +433,68 @@ class NeuronConnection
 }
 
 
-private typedef ConnectionResult =
+private typedef NeuronConnectionInfo =
 {
-    var type:String; // selfconnection | gated | inputs | projected
+    var type:NeuronConnectionType;
     var connection:NeuronConnection;
 }
 
-private typedef NeuronConnections =
+@:enum abstract NeuronConnectionType(Int) to Int from Int
+{
+    var Inputs      = 0;
+    var Projected   = 1;
+    var Gated       = 2;
+    var Self        = 3;
+}
+
+/*private typedef NeuronConnections =
 {
     var inputs:Map<Int, NeuronConnection>;
     var projected:Map<Int, NeuronConnection>;
     var gated:Map<Int, NeuronConnection>;
+}*/
+
+
+class NeuronConnections
+{
+    public static var types:Array<NeuronConnectionType> = [Inputs, Projected, Gated];
+    
+    private var connections:Array<Map<Int, NeuronConnection>>;
+    public var inputs(get, never):Map<Int, NeuronConnection>;
+    public var projected(get, never):Map<Int, NeuronConnection>;
+    public var gated(get, never):Map<Int, NeuronConnection>;
+    
+    public function new()
+    {
+        this.connections =
+        [
+            new Map<Int, NeuronConnection>(),
+            new Map<Int, NeuronConnection>(),
+            new Map<Int, NeuronConnection>(),
+        ];
+    }
+    
+    public inline function get(type:NeuronConnectionType):Map<Int, NeuronConnection>
+    {
+        return connections[type];
+    }
+    
+    private inline function get_inputs():Map<Int, NeuronConnection>
+    {
+        return connections[NeuronConnectionType.Inputs];
+    }
+    
+    private inline function get_projected():Map<Int, NeuronConnection>
+    {
+        return connections[NeuronConnectionType.Projected];
+    }
+    
+    private inline function get_gated():Map<Int, NeuronConnection>
+    {
+        return connections[NeuronConnectionType.Gated];
+    }
 }
+
 
 private typedef NeuronError =
 {

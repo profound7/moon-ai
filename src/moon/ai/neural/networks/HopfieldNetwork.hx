@@ -2,8 +2,7 @@ package moon.ai.neural.networks;
 
 import moon.ai.neural.Layer;
 import moon.ai.neural.Network;
-import moon.ai.neural.Trainer.TrainingResults;
-import moon.ai.neural.Trainer.TrainingSet;
+import moon.ai.neural.Trainer;
 
 /**
  * ...
@@ -19,7 +18,7 @@ class HopfieldNetwork extends Network
         var inputLayer:Layer = new Layer(size);
         var outputLayer:Layer = new Layer(size);
         
-        inputLayer.project(outputLayer, ConnectionType.AllToAll);
+        inputLayer.project(outputLayer, LayerConnectionType.AllToAll);
         
         set({ input: inputLayer, hidden: [], output: outputLayer });
     }

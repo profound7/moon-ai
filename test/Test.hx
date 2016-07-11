@@ -25,7 +25,7 @@ class Test
         var r:TestRunner = new TestRunner();
         
         // util
-        //r.add(new NeuralTest());
+        r.add(new NeuralTest());
         r.add(new OptimizerTest());
         
         r.run();

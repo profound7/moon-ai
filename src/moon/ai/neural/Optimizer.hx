@@ -357,9 +357,14 @@ class NeuronOptimizer
     
     
     // helper to check if an object is empty
-    public function isEmpty(obj:Dynamic):Bool
+    /*public function isEmpty(obj:Dynamic):Bool
     {
         return Reflect.fields(obj).length == 0;
+    }*/
+    
+    public function isEmpty(map:Map<Int, NeuronConnection>):Bool
+    {
+        return map.iterator().hasNext();
     }
     
     public function run():Optimized
