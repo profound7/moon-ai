@@ -7,6 +7,8 @@ import moon.ai.neural.Layer.LayerConnection;
 import moon.ai.neural.Network.NetworkLayers;
 import moon.ai.neural.Neuron.NeuronConnection;
 
+using StringTools;
+
 /**
  * https://github.com/cazala/synaptic/wiki/Networks
  * @author Munir Hussin
@@ -33,8 +35,9 @@ class Network implements ILayerProjectable implements INetwork
     }
     
     
-    
-    // feed-forward activation of all the layers to produce an ouput
+    /**
+     * Feed-forward activation of all the layers to produce an ouput
+     */
     public function activate(input:Array<Float>):Array<Float>
     {
         if (optimizeEnabled == false)
@@ -55,7 +58,9 @@ class Network implements ILayerProjectable implements INetwork
         }
     }
     
-    // back-propagate the error thru the network
+    /**
+     * Back-propagate the error thru the network
+     */
     public function propagate(rate:Float=0.1, target:Array<Float>):Void
     {
         if (optimizeEnabled == false)
@@ -77,7 +82,9 @@ class Network implements ILayerProjectable implements INetwork
         }
     }
     
-    // project a connection to another unit (either a network or a layer)
+    /**
+     * Project a connection to another unit (either a network or a layer)
+     */
     public function project(unit:ILayerProjectable, ?type:ConnectionType, ?weight:Float):LayerConnection
     {
         if (optimized != null)
@@ -86,13 +93,17 @@ class Network implements ILayerProjectable implements INetwork
         return layers.output.project(unit.getProjectableLayer(), type, weight);
     }
     
-    // interface to get a projectable layer
+    /**
+     * Interface method to get a projectable layer
+     */
     public function getProjectableLayer():Layer
     {
         return layers.input;
     }
     
-    // let this network gate a connection
+    /**
+     * Let this network gate a connection
+     */
     public function gate(connection:LayerConnection, type:GateType):Void
     {
         if (optimized != null)
@@ -101,8 +112,10 @@ class Network implements ILayerProjectable implements INetwork
         layers.output.gate(connection, type);
     }
     
-    // clear all elegibility traces and extended elegibility traces
-    // (the network forgets its context, but not what was trained)
+    /**
+     * clear all elegibility traces and extended elegibility traces
+     * (the network forgets its context, but not what was trained)
+     */
     public function clear():Void
     {
         restore();
@@ -121,7 +134,9 @@ class Network implements ILayerProjectable implements INetwork
             optimized.reset();
     }
     
-    // reset all weights and clear all traces (ends up like a new network)
+    /**
+     * Reset all weights and clear all traces (ends up like a new network)
+     */
     public function reset():Void
     {
         restore();
@@ -140,20 +155,28 @@ class Network implements ILayerProjectable implements INetwork
             optimized.reset();
     }
     
-    // hardcodes the behaviour of the whole network into a single optimized function
+    /**
+     * (NOT IMPLEMENTED - can't dynamically generate functions in all targets)
+     * Hardcodes the behaviour of the whole network into a single optimized function
+     */
     public function optimize():Dynamic
     {
         throw "Not implemented";
     }
     
-    // restores all the values from the optimized network their respective
-    // objects in order to manipulate the network
+    /**
+     * (NOT IMPLEMENTED)
+     * Restores all the values from the optimized network their respective
+     * objects in order to manipulate the network
+     */
     public function restore():Void
     {
         throw "Not implemented";
     }
     
-    // returns all the neurons in the network
+    /**
+     * Returns all the neurons in the network
+     */
     public function neurons():Array<NeuronLayerInfo>
     {
         var neurons:Array<NeuronLayerInfo> = [];
@@ -178,19 +201,25 @@ class Network implements ILayerProjectable implements INetwork
         return neurons;
     }
     
-    // returns number of inputs of the network
+    /**
+     * Returns number of inputs of the network
+     */
     public function inputs():Int
     {
         return layers.input.size;
     }
     
-    // returns number of outputs of hte network
+    /**
+     * Returns number of outputs of the network
+     */
     public function outputs():Int
     {
         return layers.output.size;
     }
     
-    // sets the layers of the network
+    /**
+     * Sets the layers of the network
+     */
     public function set(layers:NetworkLayers):Void
     {
         this.layers = layers;
@@ -199,9 +228,13 @@ class Network implements ILayerProjectable implements INetwork
             optimized.reset();
     }
     
+    /**
+     * Enabling optimize doesn't work because dynamically generating functions is not
+     * supported in all haxe targets
+     */
     public function setOptimize(enabled:Bool):Void
     {
-        //restore();
+        //restore(); // throws error
         
         if (optimized != null)
             optimized.reset();
@@ -210,10 +243,12 @@ class Network implements ILayerProjectable implements INetwork
         optimizeEnabled = enabled;
     }
     
-    // returns a json that represents all the neurons and connections of the network
+    /**
+     * Returns a json that represents all the neurons and connections of the network
+     */
     public function toJson(ignoreTraces:Bool=false):NetworkJson
     {
-        //restore();
+        //restore(); // throws error
         
         var list:Array<NeuronLayerInfo> = neurons();
         var neurons:Array<NeuronJson> = [];
@@ -226,7 +261,8 @@ class Network implements ILayerProjectable implements INetwork
         {
             var neuron:Neuron = list[i].neuron;
             
-            // ????
+            // COMPILE ERROR: moon.ai.neural.Neuron has no field neuron
+            // possible mistake in original source?
             //while (neuron.neuron)
             //    neuron = neuron.neuron;
                 
@@ -251,7 +287,8 @@ class Network implements ILayerProjectable implements INetwork
             neurons.push(copy);
         }
         
-        // BUG in original source? neuron refers to incorrect reference
+        // no longer in original source
+        /*// BUG in original source? neuron refers to incorrect reference
         if (!ignoreTraces)
         {
             // go through every single neuron again
@@ -271,13 +308,14 @@ class Network implements ILayerProjectable implements INetwork
                         copy.trace.extended[ids[gated]][input] = neuron.trace.extended[gated][input];
                 }
             }
-        }
+        }*/
         
         // get connections
         for (i in 0...list.length)
         {
             var neuron:Neuron = list[i].neuron;
             
+            // COMPILE ERROR: moon.ai.neural.Neuron has no field neuron
             //while (neuron.neuron)
             //    neuron = neuron.neuron;
             
@@ -311,26 +349,116 @@ class Network implements ILayerProjectable implements INetwork
         }
     }
     
-    // returns a function that works as the activation of the network
-    // and can be used without depending on the library
+    /**
+     * Export the topology into dot language which can be visualized as graphs using dot.
+     * example: ... Sys.println(net.toDot());
+     *     $ neko example.n > example.dot
+     *     $ dot example.dot -Tpng > out.png
+     */
+    public function toDot(edgeConnection:Bool=false)
+    {
+        var code:String = "digraph nn {\n    rankdir = BT\n";
+        var layers:Array<Layer> = [this.layers.input].concat(this.layers.hidden.concat([this.layers.output]));
+        
+        for (layerID in 0...layers.length)
+        {
+            var layer:Layer = layers[layerID];
+            
+            // projections
+            for (connection in layer.connectedTo)
+            {
+                var layerTo:Layer = connection.to;
+                var size:Int = connection.size;
+                //var layerID:Int = layers.indexOf(layers[layer]); // OPTIMIZED: doesn't need to be computed every loop. same as layerID above
+                var layerToID:Int = layers.indexOf(layerTo);
+                
+                // http://stackoverflow.com/questions/26845540/connect-edges-with-graph-dot
+                // DOT does not support edge-to-edge connections
+                // This workaround produces somewhat weird graphs ...
+                
+                if (edgeConnection)
+                {
+                    var fakeNode:String = null; // is this correct?
+                    
+                    if (connection.gatedFrom.length > 0)
+                    {
+                        fakeNode = "fake" + layerID + "_" + layerToID;
+                        code += "    " + fakeNode + " [label = \"\", shape = point, width = 0.01, height = 0.01]\n";
+                        code += "    " + layerID + " -> " + fakeNode + " [label = " + size + ", arrowhead = none]\n";
+                        code += "    " + fakeNode + " -> " + layerToID + "\n";
+                    }
+                    else
+                    {
+                        code += "    " + layerID + " -> " + layerToID + " [label = " + size + "]\n";
+                    }
+                    
+                    // gatings
+                    for (gatedInfo in connection.gatedFrom)
+                    {
+                        var layerfrom = gatedInfo.layer;
+                        var type = gatedInfo.type;
+                        var layerfromID = layers.indexOf(layerfrom);
+                        code += "    " + layerfromID + " -> " + fakeNode + " [color = blue]\n";
+                    }
+                }
+                else
+                {
+                    code += "    " + layerID + " -> " + layerToID + " [label = " + size + "]\n";
+                    
+                    // gatings
+                    for (gatedInfo in connection.gatedFrom)
+                    {
+                        var layerfrom = gatedInfo.layer;
+                        var type = gatedInfo.type;
+                        var layerfromID = layers.indexOf(layerfrom);
+                        code += "    " + layerfromID + " -> " + layerToID + " [color = blue]\n";
+                    }
+                }
+            }
+        }
+        
+        code += "}\n";
+        
+        return
+        {
+            code: code,
+            link: "https://chart.googleapis.com/chart?chl=" + code.replace("/ /g", "+").urlEncode() + "&cht=gv"
+        }
+    }
+    
+    /**
+     * (NOT IMPLEMENTED)
+     * Returns a function that works as the activation of the network
+     * and can be used without depending on the library
+     */
     public function standalone():Dynamic
     {
         throw "Not implemented";
     }
     
-    public function worker():Dynamic
+    /**
+     * (NOT IMPLEMENTED)
+     * Return a HTML5 WebWorker specialized on training the network stored in `memory`.
+     * Train based on the given dataSet and options.
+     * The worker returns the updated `memory` when done.
+     */
+    public function worker(?memory:Dynamic, ?set:Dynamic, ?options:Dynamic):Dynamic
     {
         throw "Not implemented";
     }
     
-    // returns a copy of the network
+    /**
+     * Returns a copy of the network
+     */
     public function clone(ignoreTraces:Bool=false):Network
     {
         return Network.fromJson(toJson(ignoreTraces));
     }
     
     
-    
+    /**
+     * Rebuild a network that has been stored in a json using the method toJSON()
+     */
     public static function fromJson(json:NetworkJson):Network
     {
         var neurons:Array<Neuron> = [];
@@ -364,7 +492,7 @@ class Network implements ILayerProjectable implements INetwork
             {
                 var i:Int = Std.parseInt(config.layer);
                 
-                if (layers.hidden.length <= i)
+                if (i >= layers.hidden.length)
                     layers.hidden[i] = new Layer();
                 layers.hidden[i].add(neuron);
             }

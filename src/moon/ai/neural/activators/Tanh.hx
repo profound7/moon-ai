@@ -22,5 +22,4 @@ class Tanh implements IActivator
         var fx:Float = activation(x);
         return 1.0 - fx * fx;
     }
-    
 }

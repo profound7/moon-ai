@@ -14,6 +14,7 @@ class Layer implements ILayerProjectable
     public var size:Int;
     public var list:Array<Neuron>;
     public var label:String;
+    public var connectedTo:Array<LayerConnection>;
     
     
     public function new(size:Int=0, ?label:String)
@@ -21,10 +22,11 @@ class Layer implements ILayerProjectable
         this.size = size;
         this.list = [];
         this.label = label;
+        this.connectedTo = [];
         
         while (size-->0)
         {
-            var neuron:Neuron = new Neuron();
+            var neuron = new Neuron();
             list.push(neuron);
         }
     }
@@ -160,6 +162,9 @@ class Layer implements ILayerProjectable
                 gater.gate(gated);
             }
         }
+        
+        // NEW
+        connection.gatedFrom.push({ layer: this, type: type });
     }
     
     /**
@@ -175,6 +180,7 @@ class Layer implements ILayerProjectable
     
     /**
      * True or false whether the layer is connected to another layer (parameter) or not.
+     * TODO: rename to getConnectionType
      */
     public function isConnected(layer:Layer):ConnectionType
     {
@@ -213,6 +219,7 @@ class Layer implements ILayerProjectable
             return ConnectionType.OneToOne;
             
         return null;
+        // return ConnectionType.None; // TODO
     }
     
     /**
@@ -248,6 +255,7 @@ class Layer implements ILayerProjectable
     {
         if (neuron == null) neuron = new Neuron();
         
+        // possible BUG in original? neurons is a function not a map or array
         //neurons[neuron.ID] = neuron; ???
         list.push(neuron);
         size++;
@@ -275,12 +283,7 @@ class Layer implements ILayerProjectable
 }
 
 /**
- * This describes the connections from one layer to another layer.
- * For a layer to be connected to another layer, each neuron from one
- * layer is connected to some other neuron in another layer.
- * 
- * This class holds the list of all those connections between those
- * neurons.
+ * Represents a connection from one layer to another, and keeps track of its weight and gain
  */
 class LayerConnection
 {
@@ -294,6 +297,7 @@ class LayerConnection
     public var connections:Map<Int, NeuronConnection>;
     public var list:Array<NeuronConnection>;
     public var size:Int;
+    public var gatedFrom:Array<GatedInfo>;
     
     
     public function new(fromLayer:Layer, toLayer:Layer, type:ConnectionType, weight:Float)
@@ -306,6 +310,7 @@ class LayerConnection
         this.connections = new Map<Int, NeuronConnection>();
         this.list = [];
         this.size = 0;
+        this.gatedFrom = [];
         
         if (this.type == null)
         {
@@ -315,12 +320,15 @@ class LayerConnection
                 this.type = ConnectionType.AllToAll;
         }
         
-        if (this.type == ConnectionType.AllToAll)
+        if (this.type == ConnectionType.AllToAll || this.type == ConnectionType.AllToElse)
         {
             for (from in from.list)
             {
                 for (to in to.list)
                 {
+                    if (this.type == ConnectionType.AllToElse && from == to)
+                        continue;
+                        
                     var connection:NeuronConnection = from.project(to, weight);
                     
                     connections[connection.ID] = connection;
@@ -344,9 +352,12 @@ class LayerConnection
             
             size = list.length;
         }
+        
+        // NEW
+        fromLayer.connectedTo.push(this);
     }
     
-    public static inline function uid():Int
+    private static inline function uid():Int
     {
         return LAST_ID++;
     }
@@ -366,6 +377,12 @@ typedef LayerOptions =
     @:optional var bias:Float;
 }
 
+typedef GatedInfo =
+{
+    var layer:Layer;
+    var type:GateType;
+}
+
 enum GateType
 {
     Input;
@@ -375,7 +392,9 @@ enum GateType
 
 enum ConnectionType
 {
+    None;
     AllToAll;
     OneToOne;
+    AllToElse;
 }
 

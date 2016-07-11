@@ -20,5 +20,4 @@ class Logistic implements IActivator
         var fx:Float = activation(x);
         return fx * (1.0 - fx);
     }
-    
 }

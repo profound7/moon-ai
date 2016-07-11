@@ -35,10 +35,10 @@ class Neuron
         influences: new Map<Int, Array<NeuronConnection>>(),
     };
     
-    public var state:Float = 0;
-    public var old:Float = 0;
+    public var state:Float = 0.0;
+    public var old:Float = 0.0;
     
-    public var activation:Float = 0;
+    public var activation:Float = 0.0;
     public var derivative:Float;
     
     public var selfconnection:NeuronConnection;
@@ -50,7 +50,7 @@ class Neuron
     public function new(?activator:IActivator) 
     {
         this.ID = uid();
-        this.selfconnection = new NeuronConnection(this, this, 0);
+        this.selfconnection = new NeuronConnection(this, this, 0.0);
         this.squash = activator == null ? Activator.init : activator;
         this.neighbors = new Map<Int, Neuron>();
         this.bias = Math.random() * 0.2 - 0.1;
@@ -61,13 +61,16 @@ class Neuron
         return LAST_ID++;
     }
     
+    /**
+     * Activate the neuron
+     */
     public function activate(?input:Float):Float
     {
         if (input != null)
         {
             activation = input;
-            derivative = 0;
-            bias = 0;
+            derivative = 0.0;
+            bias = 0.0;
             return activation;
         }
         
@@ -83,34 +86,49 @@ class Neuron
             state += input.from.activation * input.weight * input.gain;
         }
         
-        // calculate the activation and derivative values
+        // eq. 16
         activation = squash.activation(state);
+        
+        // f'(s)
         derivative = squash.derivative(state);
         
         // update traces
+        var influences:Array<Float> = [];
+        for (id in trace.extended.keys())
+        {
+            // extended elegibility trace
+            var xtrace:Map<Int, Float> = trace.extended[id];
+            var neuron:Neuron = neighbors[id];
+            
+            // if gated neuron's selfconnection is gated by this unit, the influence keeps track of the neuron's old state
+            var influence:Float = neuron.selfconnection.gater == this ? neuron.old : 0.0;
+            
+            // index runs over all the incoming connections to the gated neuron that are gated by this unit
+            for (incoming in 0...trace.influences[neuron.ID].length)
+            {
+                // captures the effect that has an input connection to this unit, on a neuron that is gated by this unit
+                influence += trace.influences[neuron.ID][incoming].weight *
+                    trace.influences[neuron.ID][incoming].from.activation;
+            }
+            
+            influences[neuron.ID] = influence;
+        }
+        
+        
         for (input in connections.inputs)
         {
+            // elegibility trace - Eq. 17
             trace.eligibility[input.ID] = selfconnection.gain * selfconnection.weight *
                 trace.eligibility[input.ID] + input.gain * input.from.activation;
                 
             for (id in trace.extended.keys())
             {
+                // extended elegibility trace
                 var xtrace:Map<Int, Float> = trace.extended[id];
                 var neuron:Neuron = neighbors[id];
+                var influence:Float = influences[neuron.ID];
                 
-                // if gated neuron's selfconnection is gated by this unit, the influence
-                // keeps track of the neuron's old state
-                var influence:Float = neuron.selfconnection.gater == this ? neuron.old : 0;
-                
-                // index runs over all the incoming connections to the gated neuron that
-                // are gated by this unit
-                for (incoming in trace.influences[neuron.ID])
-                {
-                    // captures the effect that has an input connection to this unit,
-                    // on a neuron that is gated by this unit
-                    influence += incoming.weight * incoming.from.activation;
-                }
-                
+                // eq. 18
                 xtrace[input.ID] = neuron.selfconnection.gain * neuron.selfconnection.weight *
                     xtrace[input.ID] + derivative * trace.eligibility[input.ID] * influence;
             }
@@ -123,6 +141,9 @@ class Neuron
         return activation;
     }
     
+    /**
+     * Back-propagate the error
+     */
     public function propagate(rate:Float=0.1, ?target:Float):Void
     {
         // error accumulator
@@ -142,9 +163,8 @@ class Neuron
             // error responsibilities from all the connections projected from this neuron
             for (connection in connections.projected)
             {
-                //var connection:NeuronConnection = connections.projected[id];
                 var neuron:Neuron = connection.to;
-                
+                // Eq. 21
                 errorValue += neuron.error.responsibility * connection.gain * connection.weight;
             }
             
@@ -159,7 +179,7 @@ class Neuron
                 var neuron:Neuron = neighbors[id];
                 
                 // if gated neuron's selfconnection is gated by this neuron
-                var influence:Float = neuron.selfconnection.gater == this ? neuron.old : 0;
+                var influence:Float = neuron.selfconnection.gater == this ? neuron.old : 0.0;
                 
                 // index runs over all the connections to the gated neuron that are gated by this neuron
                 for (input in 0...trace.influences[id].length)
@@ -169,7 +189,7 @@ class Neuron
                     influence += trace.influences[id][input].weight *
                         trace.influences[neuron.ID][input].from.activation;
                 }
-                
+                // eq. 22
                 errorValue += neuron.error.responsibility * influence;
             }
             
@@ -203,9 +223,10 @@ class Neuron
     
     public function project(neuron:Neuron, ?weight:Float):NeuronConnection
     {
+        // self-connection
         if (neuron == this)
         {
-            selfconnection.weight = 1;
+            selfconnection.weight = 1.0;
             return selfconnection;
         }
         
@@ -225,16 +246,16 @@ class Neuron
         
         
         // create a new connection
-        var connection:NeuronConnection = new NeuronConnection(this, neuron, weight);
+        var connection = new NeuronConnection(this, neuron, weight);
         
         // reference all the connections and traces
         connections.projected[connection.ID] = connection;
         neighbors[neuron.ID] = neuron;
         neuron.connections.inputs[connection.ID] = connection;
-        neuron.trace.eligibility[connection.ID] = 0;
+        neuron.trace.eligibility[connection.ID] = 0.0;
         
         for (trace in neuron.trace.extended)
-            trace[connection.ID] = 0;
+            trace[connection.ID] = 0.0;
             
         return connection;
     }
@@ -251,11 +272,11 @@ class Neuron
             // extended trace
             neighbors[neuron.ID] = neuron;
             
-            var xtrace:Map<Int, Float> = new Map<Int, Float>();
+            var xtrace = new Map<Int, Float>();
             trace.extended[neuron.ID] = xtrace;
             
             for (input in connections.inputs)
-                xtrace[input.ID] = 0;
+                xtrace[input.ID] = 0.0;
         }
         
         // keep track
@@ -278,6 +299,7 @@ class Neuron
     
     /**
      * Returns true or false whether this neuron is connected to another neuron (parameter)
+     * TODO: rename to getConnectionType
      */
     public function isConnected(neuron:Neuron):ConnectionResult
     {
@@ -301,13 +323,15 @@ class Neuron
             }
         }
         
-        for (type in Reflect.fields(connections))
+        // TODO: optimize
+        // gated, inputs, projected
+        for (type in Reflect.fields(connections)) // :String
         {
             for (connection in (Reflect.field(connections, type):Map<Int, NeuronConnection>))
             {
                 if (connection.to == neuron || connection.from == neuron)
                 {
-                    result.type = type;
+                    result.type = type; // gated | inputs | projected
                     result.connection = connection;
                     return result;
                 }
@@ -327,7 +351,7 @@ class Neuron
             
         for (t in trace.extended)
             for (e in t.keys())
-                t[e] = 0;
+                t[e] = 0.0;
         
         error.responsibility = error.projected = error.gated = 0;
     }
@@ -339,12 +363,13 @@ class Neuron
     {
         clear();
         
+        // gated, inputs, projected
         for (type in Reflect.fields(connections))
             for (connection in (Reflect.field(connections, type):Map<Int, NeuronConnection>))
                 connection.randomizeWeight();
                 
         bias = Math.random() * 0.2 - 0.1;
-        old = state = activation = 0;
+        old = state = activation = 0.0;
     }
     
 }
@@ -371,11 +396,11 @@ class NeuronConnection
         this.from = from;
         this.to = to;
         this.weight = weight == null ? getRandom() : weight;
-        this.gain = 1;
+        this.gain = 1.0;
         this.gater = null;
     }
     
-    public static inline function uid():Int
+    private static inline function uid():Int
     {
         return LAST_ID++;
     }
@@ -395,7 +420,7 @@ class NeuronConnection
 
 private typedef ConnectionResult =
 {
-    var type:String;
+    var type:String; // selfconnection | gated | inputs | projected
     var connection:NeuronConnection;
 }
 

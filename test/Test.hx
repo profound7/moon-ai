@@ -13,10 +13,11 @@ class Test
 {
     public static function main():Void
     {
-        //run();
+        run();
         
-        var ntest = new NeuralTest();
-        ntest.exampleNeuronActivate();
+        //var ntest = new NeuralTest();
+        //ntest.exampleNeuronActivate();
+        //ntest.exampleNeuronActivate();
     }
     
     public static function run():Void
@@ -24,7 +25,7 @@ class Test
         var r:TestRunner = new TestRunner();
         
         // util
-        r.add(new NeuralTest());
+        //r.add(new NeuralTest());
         r.add(new OptimizerTest());
         
         r.run();

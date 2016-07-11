@@ -19,7 +19,7 @@ import moon.test.TestCase;
  */
 class NeuralTest extends TestCase
 {
-    private static inline var EPSILON:Float = 0.01;
+    private static inline var EPSILON:Float = 0.2;
     private static inline var EPSILON2:Float = 0.1;
     
     public static function main():Void
@@ -39,7 +39,7 @@ class NeuralTest extends TestCase
         a.activate(0.5);
         trace(b.activate());
         
-        //assert.isNear(0.5, b.activate(), EPSILON);
+        //assert.areNear(b.activate(), 0.5, EPSILON);
     }
     
     public function testNeuronPropagate():Void
@@ -64,7 +64,7 @@ class NeuralTest extends TestCase
         a.activate(1);
         //trace(b.activate());
         
-        assert.isNear(0.0, b.activate(), EPSILON);
+        assert.isNear(b.activate(), 0.0, EPSILON);
     }
     
     public function exampleLayersGate():Void
@@ -111,7 +111,7 @@ class NeuralTest extends TestCase
         a.activate([1, 0, 1, 0, 1]);
         //trace(b.activate());
         
-        assert.isNear([1.0, 0.0], b.activate(), EPSILON);
+        assert.areNear(b.activate(), [1.0, 0.0], EPSILON);
     }
     
     public function exampleNetworkActivate():Void
@@ -186,7 +186,7 @@ class NeuralTest extends TestCase
         //trace(myNetwork.activate([1, 0])); // [0.9871822457132193]
         //trace(myNetwork.activate([1, 1])); // [0.012950087641929467]
         
-        assert.isNear([0.0, 1.0, 1.0, 0.0], actual, EPSILON);
+        assert.areNear(actual, [0.0, 1.0, 1.0, 0.0], EPSILON);
     }
     
     public function testTrainer1():Void
@@ -228,7 +228,7 @@ class NeuralTest extends TestCase
             myNetwork.activate([1, 1])[0],
         ];
         
-        assert.isNear([0.0, 1.0, 1.0, 0.0], actual, EPSILON);
+        assert.areNear(actual, [0.0, 1.0, 1.0, 0.0], EPSILON);
     }
     
     public function testTrainer2():Void
@@ -264,7 +264,7 @@ class NeuralTest extends TestCase
         ];
         
         // using trainer.XOR(), since the cost is meanSquaredError, the epsilon is larger
-        assert.isNear([0.0, 1.0, 1.0, 0.0], actual, EPSILON);
+        assert.areNear(actual, [0.0, 1.0, 1.0, 0.0], EPSILON);
     }
     
     public function testPperceptron():Void
@@ -281,7 +281,7 @@ class NeuralTest extends TestCase
             nn.activate([1, 1])[0],
         ];
         
-        assert.isNear([0.0, 1.0, 1.0, 0.0], actual, EPSILON);
+        assert.areNear(actual, [0.0, 1.0, 1.0, 0.0], EPSILON);
     }
     
     public function testLtsm():Void
@@ -298,7 +298,7 @@ class NeuralTest extends TestCase
             nn.activate([1, 1])[0],
         ];
         
-        assert.isNear([0.0, 1.0, 1.0, 0.0], actual, EPSILON);
+        assert.areNear(actual, [0.0, 1.0, 1.0, 0.0], EPSILON);
     }
     
     // this test sometimes fail
@@ -316,7 +316,7 @@ class NeuralTest extends TestCase
             nn.activate([1, 1])[0],
         ];
         
-        assert.isNear([0.0, 1.0, 1.0, 0.0], actual, EPSILON);
+        assert.areNear(actual, [0.0, 1.0, 1.0, 0.0], EPSILON);
     }
     
     // this test sometimes fail
@@ -343,8 +343,8 @@ class NeuralTest extends TestCase
         //trace(actual1);     // [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
         //trace(actual2);     // [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
         
-        assert.isNear(pattern1, actual1, EPSILON);
-        assert.isNear(pattern2, actual2, EPSILON);
+        assert.areNear(actual1, pattern1, EPSILON);
+        assert.areNear(actual2, pattern2, EPSILON);
     }
 }
 

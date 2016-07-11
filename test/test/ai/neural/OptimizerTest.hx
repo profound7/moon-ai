@@ -2,6 +2,7 @@ package test.ai.neural;
 
 import moon.ai.neural.networks.PerceptronNetwork;
 import moon.ai.neural.Optimizer;
+import moon.core.Error;
 import moon.test.TestRunner;
 import moon.test.TestCase;
 
@@ -11,8 +12,7 @@ import moon.test.TestCase;
  */
 class OptimizerTest extends TestCase
 {
-    private static inline var EPSILON:Float = 0.01;
-    private static inline var EPSILON2:Float = 0.1;
+    private static inline var EPSILON:Float = 0.3;
     private static var expected:Array<Float> = [0.0, 1.0, 1.0, 0.0];
     
     public static function main():Void
@@ -36,9 +36,16 @@ class OptimizerTest extends TestCase
             nn.activate([1, 1])[0],
         ];
         
-        assert.isNear(expected, actual, EPSILON);
+        assert.areNear(actual, expected, EPSILON);
         
-        Optimizer.save(nn, "../../test", "tests.util.ai.neural.OptimizedNetwork");
+        try
+        {
+            Optimizer.save(nn, "../../test", "test.ai.neural.OptimizedNetwork2");
+        }
+        catch (ex:Error)
+        {
+            ex.printStackTrace();
+        }
         
         // test the generated network
         var nx:OptimizedNetwork = new OptimizedNetwork();
@@ -51,13 +58,14 @@ class OptimizerTest extends TestCase
             nn.activate([1, 1])[0],
         ];
         
-        assert.isNear(expected, optimized, EPSILON);
+        assert.areNear(optimized, expected, EPSILON);
         
         // actual network and optimized network should give same results
-        assert.isEqual(actual, optimized);
+        assert.areEqual(actual, optimized);
         
-        //trace(actual);
-        //trace(optimized);
+        trace("");
+        trace(actual);
+        trace(optimized);
         
         // BUG: something is wrong with code generation.
         // the outputs should exactly match, instead it closely match

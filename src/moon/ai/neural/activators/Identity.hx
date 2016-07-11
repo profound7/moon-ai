@@ -19,5 +19,4 @@ class Identity implements IActivator
     {
         return 1.0;
     }
-    
 }

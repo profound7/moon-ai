@@ -42,6 +42,7 @@ class Optimizer
         var path:String = pathToSrc + parts.join("/") + "/" + cls + ".hx";
         
         var codes:String = optimize(that, pkg, cls);
+        //trace("saving to: " + path);
         File.saveContent(path, codes);
     }
     #end
@@ -89,6 +90,9 @@ class Optimizer
         ].join("\n");
     }
     
+    /**
+     * https://github.com/cazala/synaptic/blob/master/src/network.js#L125
+     */
     public function run(pkg:String, cls:String):String
     {
         var optimized:Optimized = null;
@@ -194,7 +198,9 @@ class Optimizer
 
 
 
-
+/**
+ * https://github.com/cazala/synaptic/blob/master/src/neuron.js#L304
+ */
 class NeuronOptimizer
 {
     public var that:Neuron;
@@ -429,7 +435,7 @@ class NeuronOptimizer
             }
             
             
-            
+            // TODO: haxe inline method call instead of this?
             switch (Type.getClass(that.squash))
             {
                 case Logistic:
@@ -761,11 +767,20 @@ typedef Optimized =
     var layers:Map<String, Int>;
 }
 
-typedef Variable =
+typedef VariableX =
 {
     var value:Float;
     var id:String;
 }
 
-
+class Variable
+{
+    var id:String;
+    var value:Float;
+    
+    public function new()
+    {
+        
+    }
+}
 
