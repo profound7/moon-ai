@@ -40,7 +40,7 @@ class OptimizerTest extends TestCase
         
         try
         {
-            Optimizer.save(nn, "../../test", "test.ai.neural.OptimizedNetwork2");
+            Optimizer.save(nn, "../../test", "test.ai.neural.OptimizedNetwork");
         }
         catch (ex:Error)
         {

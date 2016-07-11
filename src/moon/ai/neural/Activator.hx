@@ -1,9 +1,6 @@
 package moon.ai.neural;
 
-import moon.ai.neural.activators.HardLimit;
-import moon.ai.neural.activators.Identity;
-import moon.ai.neural.activators.Logistic;
-import moon.ai.neural.activators.Tanh;
+import moon.ai.neural.activators.*;
 
 /**
  * ...
@@ -11,15 +8,27 @@ import moon.ai.neural.activators.Tanh;
  */
 class Activator
 {
-    public static var logistic:Logistic = new Logistic();
+    /*public static var logistic:Logistic = new Logistic();
     public static var tanh:Tanh = new Tanh();
     public static var identity:Identity = new Identity();
     public static var hardLimit:HardLimit = new HardLimit();
     
-    public static var init:IActivator = logistic;
+    public static var init:IActivator = logistic;*/
+    
+    public static var init:IActivator = new Logistic();
     
     
-    public static inline function getName(squash:IActivator):String
+    public static function getName(squash:IActivator):String
+    {
+        return Type.getClassName(Type.getClass(squash));
+    }
+    
+    public static function resolve(squash:String):IActivator
+    {
+        return Type.createInstance(Type.resolveClass(squash), []);
+    }
+    
+    /*public static inline function getName(squash:IActivator):String
     {
         return Type.getClassName(Type.getClass(squash));
     }
@@ -40,7 +49,7 @@ class Activator
         }
         
         return null;
-    }
+    }*/
 }
 
 interface IActivator

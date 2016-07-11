@@ -9,10 +9,7 @@ import moon.ai.neural.Network.NeuronLayerInfo;
 
 // for neuron
 import moon.core.Struct;
-import moon.ai.neural.activators.HardLimit;
-import moon.ai.neural.activators.Identity;
-import moon.ai.neural.activators.Logistic;
-import moon.ai.neural.activators.Tanh;
+import moon.ai.neural.activators.*;
 import moon.ai.neural.Neuron.NeuronConnection;
 
 /**
@@ -95,6 +92,9 @@ class Optimizer
      */
     public function run(pkg:String, cls:String):String
     {
+        var indent1 = "    ";
+        var indent2 = indent1 + indent1;
+        
         var optimized:Optimized = null;
         var neurons:Array<NeuronLayerInfo> = that.neurons();
         
@@ -121,7 +121,7 @@ class Optimizer
         var propagateCodes:Array<String> = [];
         
         for (variable in optimized.variables)
-            initCodes.push("        f[" + variable.id + "] = " + (variable.value != null ? variable.value : 0) + ";");
+            initCodes.push("        f[" + variable.id + "] = " + (variable.value != null ? variable.value : 0.0) + ";");
             
         // activate function
         
@@ -158,8 +158,8 @@ class Optimizer
             for (currentNeuron in 0...optimized.propagation_sentences[currentLayer].length)
                 propagateCodes.push(optimized.propagation_sentences[currentLayer][currentNeuron].join("\n"));
                 
-        return template(pkg, cls, optimized.memory, initCodes.join("\n"),
-            activateCodes.join("\n"), propagateCodes.join("\n"));
+                
+        return template(pkg, cls, optimized.memory, initCodes.join("\n"), activateCodes.join("\n"), propagateCodes.join("\n"));
         
         /*var constructor = new Function(hardcode);
         
@@ -212,9 +212,9 @@ class NeuronOptimizer
     
     public var varID:Int;
     public var neurons:Int;
-    public var inputs:Array<String>;
+    public var inputs:Array<Int>;
     public var targets:Array<Int>;
-    public var outputs:Array<String>;
+    public var outputs:Array<Int>;
     public var variables:Map<String, Variable>;
     public var activation_sentences:Array<Array<Array<String>>>;
     public var trace_sentences:Array<Array<Array<String>>>;
@@ -235,13 +235,13 @@ class NeuronOptimizer
             activation_sentences: [],
             trace_sentences: [],
             propagation_sentences: [],
-            layers:
-            {
+            layers: ["__count" => 0, "__neuron" => 0]
+            /*{
                 var x = new Map<String, Int>();
                 x["__count"] = 0;
                 x["__neuron"] = 0;
                 x;
-            },
+            },*/
         });
         
         this.that = that;
@@ -331,16 +331,12 @@ class NeuronOptimizer
         if (variables.exists(id))
             return variables[id];
             
-        return variables[id] = cast
-        {
-            value: value,
-            id: varID++
-        };
+        return variables[id] = new Variable(varID++, value);
     }
     
     // build sentence
     // buildSentence([a, b, c], storage)
-    public function buildSentence(args:Array<Dynamic>, store:Array<String>):Void
+    /*public function buildSentence(args:Array<Dynamic>, store:Array<String>):Void
     {
         var sentence:String = "        ";
         
@@ -351,7 +347,14 @@ class NeuronOptimizer
                 sentence += 'f[' + args[i].id + ']';
                 
         store.push(sentence + ';');
+    }*/
+    
+    public function buildSentence(sentence:String, store:Array<String>):Void
+    {
+        store.push("        " + sentence + ";");
     }
+    
+    
     
     // helper to check if an object is empty
     public function isEmpty(obj:Dynamic):Bool
@@ -396,7 +399,7 @@ class NeuronOptimizer
             var self_gain:Variable = null;
             var self_weight:Variable = null;
             
-            buildSentence([old, ' = ', state], store_activation);
+            buildSentence('$old = $state', store_activation);
             
             if (that.isSelfConnected())
             {
@@ -405,16 +408,16 @@ class NeuronOptimizer
                 if (that.selfconnection.gater != null)
                 {
                     self_gain = getVar([that.selfconnection, 'gain']);
-                    buildSentence([state, ' = ', self_gain, ' * ', self_weight, ' * ', state, ' + ', bias], store_activation);
+                    buildSentence('$state = $self_gain * $self_weight * $state + $bias', store_activation);
                 }
                 else
                 {
-                    buildSentence([state, ' = ', self_weight, ' * ', state, ' + ', bias], store_activation);
+                    buildSentence('$state = $self_weight * $state + $bias', store_activation);
                 }
             }
             else
             {
-                buildSentence([state, ' = ', bias], store_activation);
+                buildSentence('$state = $bias', store_activation);
             }
             
             for (i in that.connections.inputs.keys())
@@ -426,38 +429,54 @@ class NeuronOptimizer
                 if (input.gater != null)
                 {
                     var input_gain:Variable = getVar([input, 'gain']);
-                    buildSentence([state, ' += ', input_activation, ' * ', input_weight, ' * ', input_gain], store_activation);
+                    buildSentence('$state += $input_activation * $input_weight * $input_gain', store_activation);
                 }
                 else
                 {
-                    buildSentence([state, ' += ', input_activation, ' * ', input_weight], store_activation);
+                    buildSentence('$state += $input_activation * $input_weight', store_activation);
                 }
             }
             
             
             // TODO: haxe inline method call instead of this?
+            //trace(Type.getClassName(Type.getClass(that.squash)));
+            
+            var activator:String = Type.getClassName(Type.getClass(that.squash));
+            var squash:String = activator.split(".").pop();
+            
+            //buildSentence('$activation = $squash.activation($state)', store_activation);
+            //buildSentence('$derivative = $squash.derivative($state)', store_activation);
+            
             switch (Type.getClass(that.squash))
             {
                 case Logistic:
-                    buildSentence([activation, ' = (1.0 / (1.0 + Math.exp(-', state, ')))'], store_activation);
-                    buildSentence([derivative, ' = ', activation, ' * (1.0 - ', activation, ')'], store_activation);
+                    buildSentence('$activation = (1.0 / (1.0 + Math.exp(-$state)))', store_activation);
+                    buildSentence('$derivative = $activation * (1.0 - $activation)', store_activation);
                         
                 case Tanh:
                     var eP:Variable = getVar(['aux']);
                     var eN:Variable = getVar(['aux_2']);
-                    buildSentence([eP, ' = Math.exp(', state, ')'], store_activation);
-                    buildSentence([eN, ' = 1.0 / ', eP], store_activation);
-                    buildSentence([activation, ' = (', eP, ' - ', eN, ') / (', eP, ' + ', eN, ')'], store_activation);
-                    buildSentence([derivative, ' = 1.0 - (', activation, ' * ', activation, ')'], store_activation);
+                    buildSentence('$eP = Math.exp($state)', store_activation);
+                    buildSentence('$eN = 1.0 / $eP', store_activation);
+                    buildSentence('$activation = ($eP - $eN) / ($eP + $eN)', store_activation);
+                    buildSentence('$derivative = 1.0 - ($activation * $activation)', store_activation);
                     
                 case Identity:
-                    buildSentence([activation, ' = ', state], store_activation);
-                    buildSentence([derivative, ' = 1.0'], store_activation);
+                    buildSentence('$activation = $state', store_activation);
+                    buildSentence('$derivative = 1.0', store_activation);
                     
                 case HardLimit:
-                    buildSentence([activation, ' = (', state, ' > 0) ? 1.0 : 0.0'], store_activation);
-                    buildSentence([derivative, ' = 1.0'], store_activation);
+                    buildSentence('$activation = ($state > 0) ? 1.0 : 0.0', store_activation);
+                    buildSentence('$derivative = 1.0', store_activation);
+                    
+                case Relu:
+                    buildSentence('$activation = ($state > 0) ? $state : 0.0', store_activation);
+                    buildSentence('$derivative = ($state > 0) ? 1.0 : 0.0', store_activation);
+                    
+                case other:
+                    throw 'Unsupported IActivator: $other';
             }
+            
             
             for (i in that.connections.inputs.keys())
             {
@@ -474,28 +493,24 @@ class NeuronOptimizer
                     if (that.selfconnection.gater != null)
                     {
                         if (input.gater != null)
-                            buildSentence([trace, ' = ', self_gain, ' * ', self_weight, ' * ',
-                                trace, ' + ', input_gain, ' * ', input_activation], store_trace);
+                            buildSentence('$trace = $self_gain * $self_weight * $trace + $input_gain * $input_activation', store_trace);
                         else
-                            buildSentence([trace, ' = ', self_gain, ' * ', self_weight, ' * ',
-                                trace, ' + ', input_activation], store_trace);
+                            buildSentence('$trace = $self_gain * $self_weight * $trace + $input_activation', store_trace);
                     }
                     else
                     {
                         if (input.gater != null)
-                            buildSentence([trace, ' = ', self_weight, ' * ', trace, ' + ',
-                                input_gain, ' * ', input_activation], store_trace);
+                            buildSentence('$trace = $self_weight * $trace + $input_gain * $input_activation', store_trace);
                         else
-                            buildSentence([trace, ' = ', self_weight, ' * ', trace, ' + ',
-                                input_activation], store_trace);
+                            buildSentence('$trace = $self_weight * $trace + $input_activation', store_trace);
                     }
                 }
                 else
                 {
                     if (input.gater != null)
-                        buildSentence([trace, ' = ', input_gain, ' * ', input_activation], store_trace);
+                        buildSentence('$trace = $input_gain * $input_activation', store_trace);
                     else
-                        buildSentence([trace, ' = ', input_activation], store_trace);
+                        buildSentence('$trace = $input_activation', store_trace);
                 }
                 
                 for (id in that.trace.extended.keys())
@@ -507,22 +522,20 @@ class NeuronOptimizer
                     var neuron_old:Variable = getVar([neuron, 'old']);
                     
                     if (neuron.selfconnection.gater == that)
-                        buildSentence([influence, ' = ', neuron_old], store_trace);
+                        buildSentence('$influence = $neuron_old', store_trace);
                     else
-                        buildSentence([influence, ' = 0'], store_trace);
+                        buildSentence('$influence = 0.0', store_trace);
                         
                     for (incoming in that.trace.influences[neuron.ID])
                     {
                         var incoming_weight:Variable = getVar([incoming, 'weight']);
                         var incoming_activation:Variable = getVar([incoming.from, 'activation']);
                         
-                        buildSentence([influence, ' += ', incoming_weight, ' * ', incoming_activation], store_trace);
+                        buildSentence('$influence += $incoming_weight * $incoming_activation', store_trace);
                     }
                     
-                    var trace:Variable = getVar([that, 'trace', 'elegibility', input.ID,
-                        that.trace.eligibility[input.ID]]);
-                    var xtrace:Variable = getVar([that, 'trace', 'extended', neuron.ID, input.ID,
-                        that.trace.extended[neuron.ID][input.ID]]);
+                    var trace:Variable = getVar([that, 'trace', 'elegibility', input.ID, that.trace.eligibility[input.ID]]);
+                    var xtrace:Variable = getVar([that, 'trace', 'extended', neuron.ID, input.ID, that.trace.extended[neuron.ID][input.ID]]);
                     
                     
                     if (neuron.isSelfConnected())
@@ -532,18 +545,16 @@ class NeuronOptimizer
                         if (neuron.selfconnection.gater != null)
                         {
                             var neuron_self_gain:Variable = getVar([neuron.selfconnection, 'gain']);
-                            buildSentence([xtrace, ' = ', neuron_self_gain, ' * ', neuron_self_weight, ' * ',
-                                xtrace, ' + ', derivative, ' * ', trace, ' * ', influence], store_trace);
+                            buildSentence('$xtrace = $neuron_self_gain * $neuron_self_weight * $xtrace + $derivative * $trace * $influence', store_trace);
                         }
                         else
                         {
-                            buildSentence([xtrace, ' = ', neuron_self_weight, ' * ', xtrace, ' + ',
-                                derivative, ' * ', trace, ' * ', influence], store_trace);
+                            buildSentence('$xtrace = $neuron_self_weight * $xtrace + $derivative * $trace * $influence', store_trace);
                         }
                     }
                     else
                     {
-                        buildSentence([xtrace, ' = ', derivative, ' * ', trace, ' * ', influence], store_trace);
+                        buildSentence('$xtrace = $derivative * $trace * $influence', store_trace);
                     }
                 }
             }
@@ -551,7 +562,7 @@ class NeuronOptimizer
             for (connection in that.connections.gated)
             {
                 var gated_gain:Variable = getVar([connection, 'gain']);
-                buildSentence([gated_gain, ' = ', activation], store_activation);
+                buildSentence('$gated_gain = $activation', store_activation);
             }
         }
         
@@ -562,14 +573,14 @@ class NeuronOptimizer
             if (isOutput)
             {
                 var target:Variable = getVar(['target']);
-                buildSentence([responsibility, ' = ', target, ' - ', activation], store_propagation);
+                buildSentence('$responsibility = $target - $activation', store_propagation);
                 
                 for (input in that.connections.inputs)
                 {
                     var trace:Variable = getVar([that, 'trace', 'elegibility', input.ID, that.trace.eligibility[input.ID]]);
                     var input_weight:Variable = getVar([input, 'weight']);
                     
-                    buildSentence([input_weight, ' += ', rate, ' * (', responsibility, ' * ', trace, ')'], store_propagation);
+                    buildSentence('$input_weight += $rate * ($responsibility * $trace)', store_propagation);
                 }
                 
                 outputs.push(activation.id);
@@ -590,18 +601,17 @@ class NeuronOptimizer
                         if (connection.gater != null)
                         {
                             var connection_gain:Variable = getVar([connection, 'gain']);
-                            buildSentence([error, ' += ', neuron_responsibility, ' * ', connection_gain, ' * ',
-                                connection_weight], store_propagation);
+                            buildSentence('$error += $neuron_responsibility * $connection_gain * $connection_weight', store_propagation);
                         }
                         else
                         {
-                            buildSentence([error, ' += ', neuron_responsibility, ' * ', connection_weight], store_propagation);
+                            buildSentence('$error += $neuron_responsibility * $connection_weight', store_propagation);
                         }
                     }
                     
                     var projected:Variable = getVar([that, 'error', 'projected', that.error.projected]);
-                    buildSentence([projected, ' = ', derivative, ' * ', error], store_propagation);
-                    buildSentence([error, ' = 0'], store_propagation);
+                    buildSentence('$projected = $derivative * $error', store_propagation);
+                    buildSentence('$error = 0', store_propagation);
                     
                     for (id in that.trace.extended.keys())
                     {
@@ -610,49 +620,49 @@ class NeuronOptimizer
                         var neuron_old:Variable = getVar([neuron, 'old']);
                         
                         if (neuron.selfconnection.gater == that)
-                            buildSentence([influence, ' = ', neuron_old], store_propagation);
+                            buildSentence('$influence = $neuron_old', store_propagation);
                         else
-                            buildSentence([influence, ' = 0'], store_propagation);
+                            buildSentence('$influence = 0', store_propagation);
                             
                         for (connection in that.trace.influences[neuron.ID])
                         {
                             //var connection = that.trace.influences[neuron.ID][input];
                             var connection_weight:Variable = getVar([connection, 'weight']);
                             var neuron_activation:Variable = getVar([connection.from, 'activation']);
-                            buildSentence([influence, ' += ', connection_weight, ' * ', neuron_activation], store_propagation);
+                            buildSentence('$influence += $connection_weight * $neuron_activation', store_propagation);
                         }
                         
                         var neuron_responsibility:Variable = getVar([neuron, 'error', 'responsibility', neuron.error.responsibility]);
-                        buildSentence([error, ' += ', neuron_responsibility, ' * ', influence], store_propagation);
+                        buildSentence('$error += $neuron_responsibility * $influence', store_propagation);
                     }
                     
                     var gated:Variable = getVar([that, 'error', 'gated', that.error.gated]);
-                    buildSentence([gated, ' = ', derivative, ' * ', error], store_propagation);
-                    buildSentence([responsibility, ' = ', projected, ' + ', gated], store_propagation);
+                    buildSentence('$gated = $derivative * $error', store_propagation);
+                    buildSentence('$responsibility = $projected + $gated', store_propagation);
                     
                     for (id in that.connections.inputs.keys())
                     {
                         var input:NeuronConnection = that.connections.inputs[id];
                         var gradient:Variable = getVar(['aux']);
                         var trace:Variable = getVar([that, 'trace', 'elegibility', input.ID, that.trace.eligibility[input.ID]]);
-                        buildSentence([gradient, ' = ', projected, ' * ', trace], store_propagation);
+                        buildSentence('$gradient = $projected * $trace', store_propagation);
                         
                         for (id in that.trace.extended.keys())
                         {
                             var neuron:Neuron = that.neighbors[id];
                             var neuron_responsibility:Variable = getVar([neuron, 'error', 'responsibility', neuron.error.responsibility]);
                             var xtrace:Variable = getVar([that, 'trace', 'extended', neuron.ID, input.ID, that.trace.extended[neuron.ID][input.ID]]);
-                            buildSentence([gradient, ' += ', neuron_responsibility, ' * ', xtrace], store_propagation);
+                            buildSentence('$gradient += $neuron_responsibility * $xtrace', store_propagation);
                         }
                         
                         var input_weight:Variable = getVar([input, 'weight']);
-                        buildSentence([input_weight, ' += ', rate, ' * ', gradient], store_propagation);
+                        buildSentence('$input_weight += $rate * $gradient', store_propagation);
                     }
                     
                 }
                 else if (noGates)
                 {
-                    buildSentence([responsibility, ' = 0'], store_propagation);
+                    buildSentence('$responsibility = 0', store_propagation);
                     
                     for (id in that.connections.projected.keys())
                     {
@@ -664,27 +674,27 @@ class NeuronOptimizer
                         if (connection.gater != null)
                         {
                             var connection_gain:Variable = getVar([connection, 'gain']);
-                            buildSentence([responsibility, ' += ', neuron_responsibility, ' * ', connection_gain, ' * ', connection_weight], store_propagation);
+                            buildSentence('$responsibility += $neuron_responsibility * $connection_gain * $connection_weight', store_propagation);
                         }
                         else
                         {
-                            buildSentence([responsibility, ' += ', neuron_responsibility, ' * ', connection_weight], store_propagation);
+                            buildSentence('$responsibility += $neuron_responsibility * $connection_weight', store_propagation);
                         }
                     }
                     
-                    buildSentence([responsibility, ' *= ', derivative], store_propagation);
+                    buildSentence('$responsibility *= $derivative', store_propagation);
                     
                     for (id in that.connections.inputs.keys())
                     {
                         var input:NeuronConnection = that.connections.inputs[id];
                         var trace:Variable = getVar([that, 'trace', 'elegibility', input.ID, that.trace.eligibility[input.ID]]);
                         var input_weight:Variable = getVar([input, 'weight']);
-                        buildSentence([input_weight, ' += ', rate, ' * (', responsibility, ' * ', trace, ')'], store_propagation);
+                        buildSentence('$input_weight += $rate * ($responsibility * $trace)', store_propagation);
                     }
                 }
                 else if (noProjections)
                 {
-                    buildSentence([responsibility, ' = 0'], store_propagation);
+                    buildSentence('$responsibility = 0', store_propagation);
                     
                     for (id in that.trace.extended.keys())
                     {
@@ -693,45 +703,45 @@ class NeuronOptimizer
                         var neuron_old:Variable = getVar([neuron, 'old']);
                         
                         if (neuron.selfconnection.gater == that)
-                            buildSentence([influence, ' = ', neuron_old], store_propagation);
+                            buildSentence('$influence = $neuron_old', store_propagation);
                         else
-                            buildSentence([influence, ' = 0'], store_propagation);
+                            buildSentence('$influence = 0', store_propagation);
                             
                         for (connection in that.trace.influences[neuron.ID])
                         {
                             //var connection = that.trace.influences[neuron.ID][input];
                             var connection_weight:Variable = getVar([connection, 'weight']);
                             var neuron_activation:Variable = getVar([connection.from, 'activation']);
-                            buildSentence([influence, ' += ', connection_weight, ' * ', neuron_activation], store_propagation);
+                            buildSentence('$influence += $connection_weight * $neuron_activation', store_propagation);
                         }
                         
                         var neuron_responsibility:Variable = getVar([neuron, 'error', 'responsibility', neuron.error.responsibility]);
-                        buildSentence([responsibility, ' += ', neuron_responsibility, ' * ', influence], store_propagation);
+                        buildSentence('$responsibility += $neuron_responsibility * $influence', store_propagation);
                     }
                     
-                    buildSentence([responsibility, ' *= ', derivative], store_propagation);
+                    buildSentence('$responsibility *= $derivative', store_propagation);
                     
                     for (id in that.connections.inputs.keys())
                     {
                         var input:NeuronConnection = that.connections.inputs[id];
                         var gradient:Variable = getVar(['aux']);
-                        buildSentence([gradient, ' = 0'], store_propagation);
+                        buildSentence('$gradient = 0', store_propagation);
                         
                         for (id in that.trace.extended.keys())
                         {
                             var neuron:Neuron = that.neighbors[id];
                             var neuron_responsibility:Variable = getVar([neuron, 'error', 'responsibility', neuron.error.responsibility]);
                             var xtrace:Variable = getVar([that, 'trace', 'extended', neuron.ID, input.ID, that.trace.extended[neuron.ID][input.ID]]);
-                            buildSentence([gradient, ' += ', neuron_responsibility, ' * ', xtrace], store_propagation);
+                            buildSentence('$gradient += $neuron_responsibility * $xtrace', store_propagation);
                         }
                         
                         var input_weight:Variable = getVar([input, 'weight']);
-                        buildSentence([input_weight, ' += ', rate, ' * ', gradient], store_propagation);
+                        buildSentence('$input_weight += $rate * $gradient', store_propagation);
                     }
                 }
             }
             
-            buildSentence([bias, ' += ', rate, ' * ', responsibility], store_propagation);
+            buildSentence('$bias += $rate * $responsibility', store_propagation);
         }
         
         return
@@ -757,8 +767,8 @@ typedef Optimized =
 {
     var memory:Int;
     var neurons:Int;
-    var inputs:Array<String>;
-    var outputs:Array<String>;
+    var inputs:Array<Int>;
+    var outputs:Array<Int>;
     var targets:Array<Int>;
     var variables:Map<String, Variable>;
     var activation_sentences:Array<Array<Array<String>>>;
@@ -767,20 +777,20 @@ typedef Optimized =
     var layers:Map<String, Int>;
 }
 
-typedef VariableX =
-{
-    var value:Float;
-    var id:String;
-}
-
 class Variable
 {
-    var id:String;
-    var value:Float;
+    public var id:Int;
+    public var value:Float;
     
-    public function new()
+    public function new(id:Int, value:Float)
     {
-        
+        this.id = id;
+        this.value = value;
+    }
+    
+    public function toString():String
+    {
+        return 'f[$id]';
     }
 }
 

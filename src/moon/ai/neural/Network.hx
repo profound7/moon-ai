@@ -519,7 +519,14 @@ class Network implements ILayerProjectable implements INetwork
 
 interface INetwork
 {
+    /**
+     * Feed-forward activation of all the layers to produce an ouput
+     */
     public function activate(input:Array<Float>):Array<Float>;
+    
+    /**
+     * Back-propagate the error thru the network
+     */
     public function propagate(rate:Float=0.1, target:Array<Float>):Void;
 }
 

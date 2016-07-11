@@ -10,7 +10,7 @@ class Logistic implements IActivator
 {
     public function new() {}
     
-    public function activation(x:Float):Float 
+    public function activation(x:Float):Float
     {
         return 1.0 / (1.0 + Math.exp(-x));
     }
