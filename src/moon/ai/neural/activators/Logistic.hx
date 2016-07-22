@@ -3,7 +3,12 @@ package moon.ai.neural.activators;
 import moon.ai.neural.Activator.IActivator;
 
 /**
- * ...
+ * Logistic/Sigmoid function
+ * 
+ * When x is negative, output is 0 to 0.5
+ * When x is positive, output is 0.5 to 1
+ * Output range is (0, 1)
+ * 
  * @author Munir Hussin
  */
 class Logistic implements IActivator

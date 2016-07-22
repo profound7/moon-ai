@@ -4,7 +4,9 @@ import haxe.extern.EitherType;
 import haxe.Timer;
 
 /**
- * ...
+ * TODO: update to latest
+ * https://github.com/cazala/synaptic/blob/master/src/trainer.js
+ * 
  * @author Munir Hussin
  */
 class Trainer
@@ -212,13 +214,13 @@ class Trainer
     // trains the network to pass a Distracted Sequence Recall test
     public function DSR(?options:TrainerOptions):TrainingResults
     {
-        return null;
+        throw "not yet ported";
     }
     
     // train the network to learn an Embeded Reber Grammar
     public function ERG(?options:TrainerOptions):TrainingResults
     {
-        return null;
+        throw "not yet ported";
     }
 }
 
@@ -270,7 +272,7 @@ class TrainerCost
 {
     public static function crossEntropy(target:Array<Float>, output:Array<Float>):Float
     {
-        var crossentropy:Float = 0;
+        var crossentropy:Float = 0.0;
         for (i in 0...output.length)
             crossentropy -= (target[i] * Math.log(output[i] + 1e-15)) +
                 ((1 - target[i]) * Math.log((1 + 1e-15) - output[i]));
@@ -280,10 +282,18 @@ class TrainerCost
     
     public static function meanSquaredError(target:Array<Float>, output:Array<Float>):Float
     {
-        var mse:Float = 0;
+        var mse:Float = 0.0;
         for (i in 0...output.length)
             mse += Math.pow(target[i] - output[i], 2);
         return mse / output.length;
+    }
+    
+    public static function binary(target:Array<Float>, output:Array<Float>):Float
+    {
+        var misses:Float = 0;
+        for (i in 0...output.length)
+            misses += Math.round(target[i] * 2) != Math.round(output[i] * 2) ? 1 : 0;
+        return misses;
     }
 }
 

@@ -3,7 +3,10 @@ package moon.ai.neural.activators;
 import moon.ai.neural.Activator.IActivator;
 
 /**
- * ...
+ * Output same as input
+ * 
+ * Output range is (-Inf, Inf)
+ * 
  * @author Munir Hussin
  */
 class Identity implements IActivator

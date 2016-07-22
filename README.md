@@ -1,135 +1,55 @@
-# Moon PEG
+# Moon AI
 
-The `moon-peg` lib is a parser expression grammar (PEG) library. It also has parser classes that you can extend to build a parser.
+The `moon-ai` lib is a collection of AI related libraries.
 
-## Parser Expression Grammar
+## Artificial Neural Networks
 
-### [`moon.peg.grammar.Parser`](src/moon/peg/grammar/Parser.hx)
+### [`moon.ai.neural.Network`](src/moon/ai/neural/Network.hx)
 
-PEG packrat parser with direct and indirect left recursion support. Recursive descent can't handle left recursive grammar. This parser is like recursive descent, but uses some techniques from [the paper by Warth, Douglass, Millstein](http://www.vpri.org/pdf/tr2007002_packrat.pdf), such as memoization, to support both direct and indirect left recursion.
+**This is a Haxe port of a JavaScript neural network library [Synaptic](https://github.com/cazala/synaptic), by [Juan Cazala](https://github.com/cazala).** 
 
-There's only ordered choice and greedy choice. No unordered choice (context-free grammar).
+The API is mostly the same as the one in the JavaScript original. So all those examples from the synaptic page should work when you port them to Haxe. **Except for**:
 
-There's 2 ways of using this class:
+- layer.selfconnected() is renamed to layer.isSelfConnected()
+- layer.connection() is renamed to layer.getConnectionType()
+- neuron.selfconnected() is renamed to neuron.isSelfConnected()
+- neuron.connection() is renamed to neuron.getConnectionInfo()
+    - getConnectionInfo instead of getConnectionType because there's both NeuronConnectionInfo and NeuronConnectionType, and the former consist of the latter.
 
-1. Use Parser class without class parameters. This allows you to load any grammar files at runtime.
-     
-   ```haxe
-   var p = new Parser(peg);
-   var ast = p.parse(codes);
-   ```
+As part of the porting process:
+- Everything is typed (avoided Dynamic/untyped)
+- Several structures from the original js are typedef-ed or turned to enums in haxe where appropriate
+- Activator functions are `(value:Float, isDerivative:Bool):Float` in the original js source, but in Haxe, it's an `IActivator` interface with `activation(x:Float):Float` and `derivative(x:Float):Float` methods.
+    - The various activators are found in [`moon.ai.neural.activators`](src/moon/ai/neural/activators) package.
 
-2. Use Parser class with String parameter. This uses haxe's genericBuild, so the grammar file is processed at compile-time. You do not need the grammar file after compilation.
-     
-   ```haxe
-   var p = new Parser<"data/lisp.peg">();
-   var ast = p.parse(codes);
-   ```
-   
-#### Grammar Examples
+#### Future Work
 
-This is an example of an expression grammar that you might find online or in textbooks.
+In Haxe, certain features of Synaptic is not implemented, as they require more work to make them function consistently across all targets, like web workers.
 
+The optimize feature in the js version dynamically generates an optimized function that works on an array of floats. I don't think this can be done in Haxe at run-time since eval is not available on all targets, but I implemented it anyway to generate a .hx file that could then be compiled. This is not implemented as a macro yet.
+
+Another idea that haven't been implemented is a macro to automatically normalize values based on the type.
+
+```haxe
+enum Weather { Sunny; Cloudy; Rain; Thunderstorm; Snow; }
+
+class Foo
+{
+    public function bar(w:Weather, temperature:Float, x:Bool):Tuple<Weather, Float>
+    {
+        // normalize is the macro to turn enums/bools/strings into normalized floats.
+        // since Weather is an enum with 5 values, it requires 3 bits of information.
+        // so a weather is represented as 3 floats.
+        var inputs:Array<Float> = normalize(w, temperature/100, x);
+        ...
+        var output:Array<Float> = network.activate(inputs);
+        
+        // denormalize is another macro to turn floats back into their type values.
+        return denormalize(output, w, temperature/100, x);
+    }
+}
 ```
-S = AB*
-AB = A B
-A = 'a'+
-B = 'b'+
-```
 
-Direct and indirect recursion example:
-
-```
-$a = "x" / "y";
-
-// direct recursion
-s = s a / a;
-
-// indirect recursion
-r = t;
-t = r a / a;
-```
-
-For another example, see [LispTest.hx](test/moon/peg/LispTest.hx), [LispParser.hx](src/moon/peg/lang/LispParser.hx), and its corresponding grammar file [Lisp.peg](data/Lisp.peg).
-
-#### Grammar Rules
-
-##### The ParseTree Enum
-
-ParseTree                      | Notes
--------------------------------|-------
-`Empty`                        | No value
-`Value(v:String)`              | terminal value
-`Tree(v:ParseTree)`            | single value (for pass-thru)
-`Multi(a:Array<ParseTree>)`    | multi-values (for seq, A*, A+, etc...)
-`Node(id:String, v:ParseTree)` | with child nodes
-
-
-##### Basic Operations
-
-Category                | Example    | Notes
-------------------------|------------|-------
-Rule                    | S = A      | &nbsp;
-Regular Expression      | [A-Z]+     | &nbsp;
-Rule Reference          | A          | &nbsp;
-Empty                   | epsilon    | Always succeeds. Matches empty string.
-Back Reference          | 2          | Any integer. 2 refers to 2nd matched item
-End of Rule             | A;         | Semicolons are automatically inserted. In ambiguous cases, you need to manually add the semicolon.
-Ordered Choice          | A / B      | Returns the first success
-Greedy Choice*          | A &#124; B | Both evaluated. Result that consumes more is used.
-Sequence                | A B        | &nbsp;
-Grouping                | (A &#124; B) C  | Sequence of (A or B) followed by C.
-Zero or More            | A*         | Greedy match
-One or More             | A+         | Greedy match
-Optional                | A?         | &nbsp;
-Look-ahead              | &A         | Does not consume match
-Negative Look-ahead     | !A         | Does not consume match
-
-##### Special Operations
-
-Category                | Example    | Notes
-------------------------|------------|-------
-Hide                    | @A         | Matches and consumes. If successful, return Empty instead.
-Pass                    | $A         | Unwrap result of A. i.e. $(Node("X", v)) ==> v
-Anon                    | %A         | Prevent creation of Node to current rule.
-Transform               | A:X        | Wrap result of A to a Node
-Transform               | A:","      | Flatten result to value separated by a String
-Transform               | A:n        | If n=0, return original result. Otherwise, return nth item that's matched
-Transform               | A:(1 0)    | Create a Multi where the numbers are the indexes of the result of A
-Transform               | A:$f       | Calls a custom transformation function
-
-##### Anon
-
-Prevent creation of Node to current rule.
-`$A = B` ==> `A = %B`
-
-Usage: `A = B | %C`
-- if B matches ==> Node("A", resultOfB)
-- if C matches ==> resultOfC
-
-
-##### Transform
-
-You can define transformations of nodes within the grammar.
-
-Eg. A:(1 0)
-You can use this to resequence result. If resultOfA is Multi(["abc", "123"]) then,
-
-- A:(2 1)     ==> Multi(["123", "abc"])
-- A:(2 1 0)   ==> Multi(["123", "abc", "abc", "123"]) // 0 is "abc", "123"
-- A:(2 1 2 1) ==> Multi(["123", "abc", "123", "abc"])
-- A:(2 "-" 1) ==> Multi(["123", "abc-123", "abc"])
-
-
-Transformations can be nested. The result of one transformation, can be further transformed, like in the following rule:
-- A:(0:"-" 1)
-
-## Todos
-
-- Line/character position info.
-- Refactor the macro that generates the parser at compile-time (ugly code done long ago).
-- Unit tests
-- Optimize
 
 ## Contributing
 
@@ -138,9 +58,8 @@ Feel free to contribute. Contributions, bug fixes, and feature requests are welc
 
 ## Credits
   
-- Parser `moon.peg.grammar` (reference, ideas)
-  Warth, Douglass, Millstein: http://www.vpri.org/pdf/tr2007002_packrat.pdf
-  Mark Engelberg: https://github.com/Engelberg/instaparse
+- Neural moon.ai.neural (port)
+  Juan Calaza: https://github.com/cazala/synaptic
   
 ## License
   

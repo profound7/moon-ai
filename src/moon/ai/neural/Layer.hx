@@ -285,7 +285,7 @@ class Layer implements ILayerProjectable
  */
 class LayerConnection
 {
-    private static var LAST_ID:Int = 0;
+    private static var NEXT_ID:Int = 0;
     
     public var ID:Int;
     public var from:Layer;
@@ -357,7 +357,7 @@ class LayerConnection
     
     private static inline function uid():Int
     {
-        return LAST_ID++;
+        return NEXT_ID++;
     }
 }
 

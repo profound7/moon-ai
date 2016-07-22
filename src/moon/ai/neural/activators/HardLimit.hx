@@ -3,7 +3,13 @@ package moon.ai.neural.activators;
 import moon.ai.neural.Activator.IActivator;
 
 /**
- * ...
+ * HardLimit / Binary Step
+ * 
+ * When x is negative, output is 0
+ * When x is positive, output is 1
+ * 
+ * Output range is {0, 1}
+ * 
  * @author Munir Hussin
  */
 class HardLimit implements IActivator

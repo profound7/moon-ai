@@ -446,8 +446,8 @@ class NeuronOptimizer
             // TODO: haxe inline method call instead of this?
             //trace(Type.getClassName(Type.getClass(that.squash)));
             
-            var activator:String = Type.getClassName(Type.getClass(that.squash));
-            var squash:String = activator.split(".").pop();
+            //var activator:String = Type.getClassName(Type.getClass(that.squash));
+            //var squash:String = activator.split(".").pop();
             
             //buildSentence('$activation = $squash.activation($state)', store_activation);
             //buildSentence('$derivative = $squash.derivative($state)', store_activation);
@@ -474,7 +474,7 @@ class NeuronOptimizer
                     buildSentence('$activation = ($state > 0) ? 1.0 : 0.0', store_activation);
                     buildSentence('$derivative = 1.0', store_activation);
                     
-                case Relu:
+                case ReLU:
                     buildSentence('$activation = ($state > 0) ? $state : 0.0', store_activation);
                     buildSentence('$derivative = ($state > 0) ? 1.0 : 0.0', store_activation);
                     

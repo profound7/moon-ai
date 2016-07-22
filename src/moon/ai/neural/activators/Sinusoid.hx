@@ -3,26 +3,24 @@ package moon.ai.neural.activators;
 import moon.ai.neural.Activator.IActivator;
 
 /**
- * Rectified Linear Unit (ReLU)
+ * Output range is [-1, 1]
  * 
- * When x is negative, output 0
- * When x is positive, output x
- * 
- * Output range is [0, Inf)
+ * I don't think anyone really uses this for neural networks,
+ * but I added some of this for my own experimentations.
  * 
  * @author Munir Hussin
  */
-class ReLU implements IActivator
+class Sinusoid implements IActivator
 {
     public function new() {}
     
     public function activation(x:Float):Float 
     {
-        return x > 0.0 ? x : 0.0;
+        return Math.sin(x);
     }
     
     public function derivative(x:Float):Float
     {
-        return x > 0.0 ? 1.0 : 0.0;
+        return Math.cos(x);
     }
 }

@@ -10,7 +10,7 @@ import moon.ai.neural.Neuron.NeuronConnections;
  */
 class Neuron
 {
-    private static var LAST_ID:Int = 0;
+    private static var NEXT_ID:Int = 0;
     
     public var ID:Int;
     public var label:String = null;
@@ -60,7 +60,7 @@ class Neuron
     
     private static inline function uid():Int
     {
-        return LAST_ID++;
+        return NEXT_ID++;
     }
     
     /**
@@ -392,7 +392,7 @@ class Neuron
 
 class NeuronConnection
 {
-    private static var LAST_ID:Int = 0;
+    private static var NEXT_ID:Int = 0;
     
     public var ID:Int;
     public var from:Neuron;
@@ -417,7 +417,7 @@ class NeuronConnection
     
     private static inline function uid():Int
     {
-        return LAST_ID++;
+        return NEXT_ID++;
     }
     
     public static inline function getRandom():Float
@@ -466,7 +466,7 @@ class NeuronConnections
     
     public function new()
     {
-        this.connections =
+        connections =
         [
             new Map<Int, NeuronConnection>(),
             new Map<Int, NeuronConnection>(),

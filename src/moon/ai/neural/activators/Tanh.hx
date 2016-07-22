@@ -3,7 +3,11 @@ package moon.ai.neural.activators;
 import moon.ai.neural.Activator.IActivator;
 
 /**
- * ...
+ * When x is negative, output is -1 to 0
+ * When x is positive, output is 0 to 1
+ * 
+ * Output range is (-1, 1)
+ * 
  * @author Munir Hussin
  */
 class Tanh implements IActivator
