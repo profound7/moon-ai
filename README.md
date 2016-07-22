@@ -33,7 +33,7 @@ Another idea that haven't been implemented is a macro to automatically normalize
 ```haxe
 enum Weather { Sunny; Cloudy; Rain; Thunderstorm; Snow; }
 
-class Foo
+class Foo extends PerceptronNetwork
 {
     public function bar(w:Weather, temperature:Float, x:Bool):Tuple<Weather, Float>
     {
@@ -42,7 +42,7 @@ class Foo
         // so a weather is represented as 3 floats.
         var inputs:Array<Float> = normalize(w, temperature/100, x);
         ...
-        var output:Array<Float> = network.activate(inputs);
+        var output:Array<Float> = activate(inputs);
         
         // denormalize is another macro to turn floats back into their type values.
         return denormalize(output, w, temperature/100, x);
